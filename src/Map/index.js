@@ -1,18 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Leaflet from "leaflet";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  useMapEvents,
-} from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import "./Map.css";
 import "leaflet-routing-machine";
 import Routing from "../Road";
 
-import pin from "../pin.svg";
-import car from "../car.svg";
+import pin from "../assets/icons/pin.svg";
+import car from "../assets/icons/car.svg";
 
 let markerIcon = Leaflet.icon({
   iconUrl: pin,
@@ -32,7 +27,8 @@ function Map() {
   const [markers, setMarkers] = useState([]);
   const [road, setRoad] = useState(null);
   const [times, setTimes] = useState([]);
-  const [type, setType] = useState('');
+  const [type, setType] = useState("");
+  const [counter, setCounter] = useState(0);
   function addMarker(latlng) {
     if (markers.length < 2) {
       let newMarkers = [...markers];
@@ -41,7 +37,7 @@ function Map() {
     }
   }
   const LocationFinderDummy = () => {
-    const mapEvents = useMapEvents({
+    useMapEvents({
       click(e) {
         addMarker(e.latlng);
       },
@@ -50,21 +46,23 @@ function Map() {
   };
   const markerRef = useRef(null);
   useEffect(() => {
-    if (road && markerRef.current && type==="autorun") {
-      let newTimes = [...times]
+    if (road && markerRef.current && type === "autorun") {
+      let newTimes = [...times];
       road.coordinates.forEach(function (coord, index) {
-        newTimes.push( setTimeout(function () {
-          markerRef.current.setLatLng([coord.lat, coord.lng]);
-        }, 10 * index))
+        newTimes.push(
+          setTimeout(function () {
+            markerRef.current.setLatLng([coord.lat, coord.lng]);
+          }, 10 * index)
+        );
       });
-      setTimes(newTimes)
+      setTimes(newTimes);
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [road, markerRef, type]);
   function reset() {
     removeTimes();
-    setMarkers([])
+    setMarkers([]);
   }
   function removeTimes() {
     for (let t = 0; t < times.length; t++) {
@@ -72,16 +70,28 @@ function Map() {
     }
     setTimes([]);
   }
-function manualChangeRoad(index) {
-  if (road && markerRef.current ) {
-  markerRef.current.setLatLng([road.coordinates[index].lat, road.coordinates[index].lng]);
+  function manualChangeRoad(index) {
+    if (road && markerRef.current) {
+      let newTimes = [...times];
+          newTimes.push(
+            setTimeout(function () {
+              markerRef.current.setLatLng([road.coordinates[index].lat, road.coordinates[index].lng]);
+              setCounter(counter + 1);
+            }, counter)
+          );
+      setTimes(newTimes);
+    }
   }
-}
-
 
   return (
     <div className="map__container">
-      { markers.length < 2 && <h1 className="map__title"> {markers.length === 0 ? 'Wybierz punkt startowy' : 'Wybierz punkt końcowy'} </h1> }
+      {markers.length < 2 && (
+        <h1 className="map__title">
+          {markers.length === 0
+            ? "Wybierz punkt startowy"
+            : "Wybierz punkt końcowy"}
+        </h1>
+      )}
       <MapContainer
         center={[52.065162, 19.252522]}
         zoom={6}
@@ -109,15 +119,56 @@ function manualChangeRoad(index) {
           <Routing points={[markers[0], markers[1]]} setRoad={setRoad} />
         )}
       </MapContainer>
-      {markers.length > 0 && <button onClick={()=> reset()} className="map__reset">Wyczyść</button> }
+      {markers.length > 0 && (
+        <button onClick={() => reset()} className="map__reset">
+          Wyczyść
+        </button>
+      )}
       <div className="map__bottom">
         <h2 className="map__text">Wybierz tryb poruszania</h2>
-        <label className="map__label" htmlFor="autorun"> Automatycznie</label>
-        <input type="radio" className="map__radio" onChange={(e)=> setType(e.currentTarget.value)} name="type" value="autorun" id="autorun" />
-        <input type="radio"  className="map__radio" onChange={(e)=> {removeTimes(); markerRef.current.setLatLng([road.coordinates[0].lat, road.coordinates[0].lng]); setType(e.currentTarget.value)}} name="type" value="scroll" id="scroll" />
-        <label className="map__label" htmlFor="scroll"> Manualnie</label>
-        {type === "scroll" && <input  className="map__range" onChange={(e)=> manualChangeRoad(e.currentTarget.value)} type="range" defaultValue="0" id="range" name="range" 
-         min="0" max={road.coordinates ? road.coordinates.length -1 : 0} step="1" />}
+        <label className="map__label" htmlFor="autorun">
+          Automatycznie
+        </label>
+        <input
+          type="radio"
+          className="map__radio"
+          onChange={(e) => setType(e.currentTarget.value)}
+          name="type"
+          value="autorun"
+          id="autorun"
+        />
+        <input
+          type="radio"
+          className="map__radio"
+          onChange={(e) => {
+            removeTimes();
+            markerRef.current.setLatLng([
+              road.coordinates[0].lat,
+              road.coordinates[0].lng,
+            ]);
+            setType(e.currentTarget.value);
+          }}
+          name="type"
+          value="scroll"
+          id="scroll"
+        />
+        <label className="map__label" htmlFor="scroll">
+          Manualnie
+        </label>
+        {type === "scroll" && (
+          <input
+            className="map__range"
+            onInput={(e) => { manualChangeRoad(e.currentTarget.value)}}
+            onMouseDown={(e) => {setCounter(0)}}
+            type="range"
+            defaultValue="0"
+            id="range"
+            name="range"
+            min="0"
+            max={road.coordinates ? road.coordinates.length - 1 : 0}
+            step="1"
+          />
+        )}
       </div>
     </div>
   );
